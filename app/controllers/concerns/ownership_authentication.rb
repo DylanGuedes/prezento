@@ -50,10 +50,26 @@ module OwnershipAuthentication
 
   private
 
-  def check_repository_ownership(id)
-    if current_user.repository_attributes.find_by_repository_id(id).nil?
+  def check_entity_ownership(id, entity_name, action=:index)
+    # Calling dinamically:
+    # current_user.project_attributes.find_by_project_id(id).nil?
+    # current_user.reading_group_attributes.find_by_reading_group(id).nil?
+    # current_user.kalibro_configuration_attributes.find_by_kalibr_configuration(id).nil?
+    # ...
+    if current_user.send(entity_name+"_attributes").send("find_by_"+entity_name+"_id", id).nil?
       respond_to do |format|
-        format.html { redirect_to projects_path, notice: t('not_allowed') }
+        # Calling the path dinamically:
+        # redirect_to reading_group_path...
+        # redirect_to kalibro_configurations_path...
+        # redirect_to projects_path...
+        # ...
+        if action==:index_with_id
+          format.html { redirect_to url_for(controller: entity_name.pluralize, action: :index, id: id), notice: t('not_allowed') }
+        elsif action==:show
+          format.html { redirect_to url_for(controller: entity_name.pluralize, action: action, id: id), notice: t('not_allowed') }
+        else
+          format.html { redirect_to url_for(controller: entity_name.pluralize, action: action), notice: t('not_allowed') }
+        end
         format.json { head :no_content }
       end
     end
@@ -61,35 +77,28 @@ module OwnershipAuthentication
     return true
   end
 
-
   def check_project_ownership(id)
-    if current_user.project_attributes.find_by_project_id(id).nil?
-      respond_to do |format|
-        format.html { redirect_to projects_path, notice: t('not_allowed') }
-        format.json { head :no_content }
-      end
-    end
-
-    return true
+    check_entity_ownership(id, "project")
   end
 
   def check_reading_group_ownership(id)
-    if current_user.reading_group_attributes.find_by_reading_group_id(id).nil?
-      respond_to do |format|
-        format.html { redirect_to reading_group_path(id: id), notice: t('not_allowed') }
-        format.json { head :no_content }
-      end
-    end
-
-    return true
+    check_entity_ownership(id, "reading_group", :show)
   end
 
   def check_kalibro_configuration_ownership(id)
-    if current_user.kalibro_configuration_attributes.find_by_kalibro_configuration_id(id).nil?
-      respond_to do |format|
-        format.html { redirect_to kalibro_configurations_path(id: id), notice: t('not_allowed') }
-        format.json { head :no_content }
-      end
-    end
+    check_entity_ownership(id, "kalibro_configuration", :index_with_id)
   end
+
+  def check_repository_ownership(id)
+    check_entity_ownership(id, "repository")
+  end
+  #
+  # def check_kalibro_configuration_ownership(id)
+  #   if current_user.kalibro_configuration_attributes.find_by_kalibro_configuration_id(id).nil?
+  #     respond_to do |format|
+  #       format.html { redirect_to kalibro_configurations_path(id: id), notice: t('not_allowed') }
+  #       format.json { head :no_content }
+  #     end
+  #   end
+  # end
 end
